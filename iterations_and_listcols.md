@@ -297,3 +297,271 @@ listcol_df =
     medians = map_dbl(samp, median)
     )
 ```
+
+## Weather data
+
+``` r
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728", "USW00022534", "USS0023B17S"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2021-01-01",
+    date_max = "2022-12-31") |>
+  mutate(
+    name = recode(
+      id, 
+      USW00094728 = "CentralPark_NY", 
+      USW00022534 = "Molokai_HI",
+      USS0023B17S = "Waterhole_WA"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) |>
+  select(name, id, everything())
+```
+
+    ## Registered S3 method overwritten by 'hoardr':
+    ##   method           from
+    ##   print.cache_info httr
+
+    ## using cached file: C:\Users\chris\AppData\Local/R/cache/R/rnoaa/noaa_ghcnd/USW00094728.dly
+
+    ## date created (size, mb): 2023-09-29 16:29:56.581161 (8.542)
+
+    ## file min/max dates: 1869-01-01 / 2023-09-30
+
+    ## using cached file: C:\Users\chris\AppData\Local/R/cache/R/rnoaa/noaa_ghcnd/USW00022534.dly
+
+    ## date created (size, mb): 2023-09-29 16:30:31.982841 (3.838)
+
+    ## file min/max dates: 1949-10-01 / 2023-09-30
+
+    ## using cached file: C:\Users\chris\AppData\Local/R/cache/R/rnoaa/noaa_ghcnd/USS0023B17S.dly
+
+    ## date created (size, mb): 2023-09-29 16:30:42.146341 (0.996)
+
+    ## file min/max dates: 1999-09-01 / 2023-09-30
+
+Get our list columns
+
+``` r
+weather_nest = 
+  weather_df %>% 
+  nest(data = date:tmin)
+```
+
+``` r
+weather_nest %>% pull(name)
+```
+
+    ## [1] "CentralPark_NY" "Molokai_HI"     "Waterhole_WA"
+
+``` r
+weather_nest %>% pull(data)
+```
+
+    ## [[1]]
+    ## # A tibble: 730 × 4
+    ##    date        prcp  tmax  tmin
+    ##    <date>     <dbl> <dbl> <dbl>
+    ##  1 2021-01-01   157   4.4   0.6
+    ##  2 2021-01-02    13  10.6   2.2
+    ##  3 2021-01-03    56   3.3   1.1
+    ##  4 2021-01-04     5   6.1   1.7
+    ##  5 2021-01-05     0   5.6   2.2
+    ##  6 2021-01-06     0   5     1.1
+    ##  7 2021-01-07     0   5    -1  
+    ##  8 2021-01-08     0   2.8  -2.7
+    ##  9 2021-01-09     0   2.8  -4.3
+    ## 10 2021-01-10     0   5    -1.6
+    ## # ℹ 720 more rows
+    ## 
+    ## [[2]]
+    ## # A tibble: 730 × 4
+    ##    date        prcp  tmax  tmin
+    ##    <date>     <dbl> <dbl> <dbl>
+    ##  1 2021-01-01     0  27.8  22.2
+    ##  2 2021-01-02     0  28.3  23.9
+    ##  3 2021-01-03     0  28.3  23.3
+    ##  4 2021-01-04     0  30    18.9
+    ##  5 2021-01-05     0  28.9  21.7
+    ##  6 2021-01-06     0  27.8  20  
+    ##  7 2021-01-07     0  29.4  21.7
+    ##  8 2021-01-08     0  28.3  18.3
+    ##  9 2021-01-09     0  27.8  18.9
+    ## 10 2021-01-10     0  28.3  18.9
+    ## # ℹ 720 more rows
+    ## 
+    ## [[3]]
+    ## # A tibble: 730 × 4
+    ##    date        prcp  tmax  tmin
+    ##    <date>     <dbl> <dbl> <dbl>
+    ##  1 2021-01-01   254   3.2   0  
+    ##  2 2021-01-02   152   0.9  -3.2
+    ##  3 2021-01-03     0   0.2  -4.2
+    ##  4 2021-01-04   559   0.9  -3.2
+    ##  5 2021-01-05    25   0.5  -3.3
+    ##  6 2021-01-06    51   0.8  -4.8
+    ##  7 2021-01-07     0   0.2  -5.8
+    ##  8 2021-01-08    25   0.5  -8.3
+    ##  9 2021-01-09     0   0.1  -7.7
+    ## 10 2021-01-10   203   0.9  -0.1
+    ## # ℹ 720 more rows
+
+``` r
+weather_nest$data[[3]]
+```
+
+    ## # A tibble: 730 × 4
+    ##    date        prcp  tmax  tmin
+    ##    <date>     <dbl> <dbl> <dbl>
+    ##  1 2021-01-01   254   3.2   0  
+    ##  2 2021-01-02   152   0.9  -3.2
+    ##  3 2021-01-03     0   0.2  -4.2
+    ##  4 2021-01-04   559   0.9  -3.2
+    ##  5 2021-01-05    25   0.5  -3.3
+    ##  6 2021-01-06    51   0.8  -4.8
+    ##  7 2021-01-07     0   0.2  -5.8
+    ##  8 2021-01-08    25   0.5  -8.3
+    ##  9 2021-01-09     0   0.1  -7.7
+    ## 10 2021-01-10   203   0.9  -0.1
+    ## # ℹ 720 more rows
+
+Suppose I want to regress `tmax` on `tmin` for each station.
+
+This works:
+
+``` r
+lm(tmax ~ tmin, data = weather_nest$data[[3]])
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = tmax ~ tmin, data = weather_nest$data[[3]])
+    ## 
+    ## Coefficients:
+    ## (Intercept)         tmin  
+    ##       7.532        1.137
+
+Let’s write function to do this regression
+
+``` r
+weather_lm = function(df) {
+  
+  lm(tmax ~ tmin, data = df)
+  
+}
+
+
+output = vector("list", 3)
+
+for (i in 1:3) {
+  output[[i]] = weather_lm(weather_nest$data[[i]])
+}
+
+weather_lm(weather_nest$data[[1]])
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = tmax ~ tmin, data = df)
+    ## 
+    ## Coefficients:
+    ## (Intercept)         tmin  
+    ##       7.514        1.034
+
+``` r
+weather_lm(weather_nest$data[[2]])
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = tmax ~ tmin, data = df)
+    ## 
+    ## Coefficients:
+    ## (Intercept)         tmin  
+    ##     21.7547       0.3222
+
+``` r
+weather_lm(weather_nest$data[[3]])
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = tmax ~ tmin, data = df)
+    ## 
+    ## Coefficients:
+    ## (Intercept)         tmin  
+    ##       7.532        1.137
+
+What about a map?
+
+``` r
+map(weather_nest$data, weather_lm)
+```
+
+    ## [[1]]
+    ## 
+    ## Call:
+    ## lm(formula = tmax ~ tmin, data = df)
+    ## 
+    ## Coefficients:
+    ## (Intercept)         tmin  
+    ##       7.514        1.034  
+    ## 
+    ## 
+    ## [[2]]
+    ## 
+    ## Call:
+    ## lm(formula = tmax ~ tmin, data = df)
+    ## 
+    ## Coefficients:
+    ## (Intercept)         tmin  
+    ##     21.7547       0.3222  
+    ## 
+    ## 
+    ## [[3]]
+    ## 
+    ## Call:
+    ## lm(formula = tmax ~ tmin, data = df)
+    ## 
+    ## Coefficients:
+    ## (Intercept)         tmin  
+    ##       7.532        1.137
+
+What about a map in a list column?
+
+``` r
+weather_nest = 
+  weather_nest %>% 
+  mutate(models = map(data, weather_lm))
+
+weather_nest$models
+```
+
+    ## [[1]]
+    ## 
+    ## Call:
+    ## lm(formula = tmax ~ tmin, data = df)
+    ## 
+    ## Coefficients:
+    ## (Intercept)         tmin  
+    ##       7.514        1.034  
+    ## 
+    ## 
+    ## [[2]]
+    ## 
+    ## Call:
+    ## lm(formula = tmax ~ tmin, data = df)
+    ## 
+    ## Coefficients:
+    ## (Intercept)         tmin  
+    ##     21.7547       0.3222  
+    ## 
+    ## 
+    ## [[3]]
+    ## 
+    ## Call:
+    ## lm(formula = tmax ~ tmin, data = df)
+    ## 
+    ## Coefficients:
+    ## (Intercept)         tmin  
+    ##       7.532        1.137
