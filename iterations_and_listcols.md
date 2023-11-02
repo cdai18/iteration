@@ -169,3 +169,15 @@ output[[i]] = mean_and_sd(list_norm[[i]])
 
 }
 ```
+
+## Let’s try map
+
+``` r
+output = map(list_norm, mean_and_sd)
+```
+
+What if you want a different function?
+
+``` r
+output = map(list_norm, median)
+```
