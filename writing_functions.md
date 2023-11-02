@@ -10,11 +10,11 @@ x_vec = rnorm(30, mean = 5, sd = 3)
 (x_vec - mean(x_vec)) / sd(x_vec)
 ```
 
-    ##  [1]  0.63271037 -0.14164184 -1.15497301  1.72001426 -1.59043358  0.26442906
-    ##  [7]  0.02093010 -1.42501544 -0.24359570  1.84646413 -1.74563637  1.55580439
-    ## [13]  1.54432031  1.12847047 -0.87594135 -0.35498041 -0.70816795 -0.25867022
-    ## [19]  0.33381499 -1.51145996  1.04774294  0.11164123  0.70895543 -0.04501870
-    ## [25]  0.00389671  0.65551983 -0.96360744  0.10509441 -0.35967713 -0.30098955
+    ##  [1]  1.08038320  0.72128628 -0.42772743  0.91913404  0.13931992 -0.95373511
+    ##  [7] -1.33363972  0.56805617 -0.14386580  1.08401273 -0.32037958 -0.26706857
+    ## [13]  0.82844258  0.11483657  2.47273763 -0.76386741 -0.06652173 -1.89529045
+    ## [19] -1.29953429 -0.19584750  0.46867320  0.98293223  1.51107458 -0.72032171
+    ## [25]  0.20924862  0.22831305  0.72763878 -1.02410510 -1.37473320 -1.26945196
 
 I want a function to compute z-scores
 
@@ -38,11 +38,11 @@ z_scores = function(x) {
 z_scores(x_vec)
 ```
 
-    ##  [1]  0.63271037 -0.14164184 -1.15497301  1.72001426 -1.59043358  0.26442906
-    ##  [7]  0.02093010 -1.42501544 -0.24359570  1.84646413 -1.74563637  1.55580439
-    ## [13]  1.54432031  1.12847047 -0.87594135 -0.35498041 -0.70816795 -0.25867022
-    ## [19]  0.33381499 -1.51145996  1.04774294  0.11164123  0.70895543 -0.04501870
-    ## [25]  0.00389671  0.65551983 -0.96360744  0.10509441 -0.35967713 -0.30098955
+    ##  [1]  1.08038320  0.72128628 -0.42772743  0.91913404  0.13931992 -0.95373511
+    ##  [7] -1.33363972  0.56805617 -0.14386580  1.08401273 -0.32037958 -0.26706857
+    ## [13]  0.82844258  0.11483657  2.47273763 -0.76386741 -0.06652173 -1.89529045
+    ## [19] -1.29953429 -0.19584750  0.46867320  0.98293223  1.51107458 -0.72032171
+    ## [25]  0.20924862  0.22831305  0.72763878 -1.02410510 -1.37473320 -1.26945196
 
 Try my function on some other things. These should give errors.
 
@@ -102,9 +102,9 @@ mean_and_sd(x_vec)
 ```
 
     ## # A tibble: 1 × 2
-    ##      mean    sd
-    ##     <dbl> <dbl>
-    ## 1 0.00156  1.00
+    ##     mean    sd
+    ##    <dbl> <dbl>
+    ## 1 0.0631 0.965
 
 ## Multiple inputs
 
@@ -126,7 +126,7 @@ sim_data %>%
     ## # A tibble: 1 × 2
     ##    mean    sd
     ##   <dbl> <dbl>
-    ## 1  4.60  2.97
+    ## 1  4.15  3.07
 
 ``` r
 sim_mean_sd = function(samp_size, mu = 3, sigma = 4) {
@@ -150,4 +150,56 @@ sim_mean_sd(samp_size = 100, mu = 6, sigma = 3)
     ## # A tibble: 1 × 2
     ##    mean    sd
     ##   <dbl> <dbl>
-    ## 1  5.24  3.11
+    ## 1  5.82  3.04
+
+## Revisiting past examples
+
+Loading the LoTR data.
+
+``` r
+fellowship_ring = readxl::read_excel("./data/LotR_Words.xlsx", range = "B3:D6") |>
+  mutate(movie = "fellowship_ring")
+
+two_towers = readxl::read_excel("./data/LotR_Words.xlsx", range = "F3:H6") |>
+  mutate(movie = "two_towers")
+
+return_king = readxl::read_excel("./data/LotR_Words.xlsx", range = "J3:L6") |>
+  mutate(movie = "return_king")
+
+lotr_tidy = bind_rows(fellowship_ring, two_towers, return_king) |>
+  janitor::clean_names() |>
+  pivot_longer(
+    female:male,
+    names_to = "sex",
+    values_to = "words") |> 
+  mutate(race = str_to_lower(race)) |> 
+  select(movie, everything()) 
+```
+
+Create a function to load and tidy the data.
+
+``` r
+lotr_load_and_tidy = function(path, range, movie_name) {
+  
+  df = 
+    readxl::read_excel(path, range = range) |>
+    janitor::clean_names() |>
+    pivot_longer(
+      female:male,
+      names_to = "sex",
+      values_to = "words") |>
+    mutate(
+      race = str_to_lower(race),
+      movie = movie_name) |> 
+    select(movie, everything())
+  
+  df
+  
+}
+
+lotr_tidy = 
+  bind_rows(
+    lotr_load_and_tidy("data/LotR_Words.xlsx", "B3:D6", "fellowship_ring"),
+    lotr_load_and_tidy("data/LotR_Words.xlsx", "F3:H6", "two_towers"),
+    lotr_load_and_tidy("data/LotR_Words.xlsx", "J3:L6", "return_king"))
+```
