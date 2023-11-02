@@ -112,3 +112,107 @@ sim_results %>%
 ```
 
 <img src="simulation_files/figure-gfm/unnamed-chunk-5-2.png" width="90%" />
+
+## Let’s try other sample sizes
+
+``` r
+n_list = 
+  list(
+    "n = 30" = 30,
+    "n = 60" = 60,
+    "n = 120" = 120,
+    "n = 240" = 240
+  )
+
+output = vector("list", length = 4)
+
+output[[1]] = rerun(100, sim_mean_sd(samp_size = n_list[[1]])) %>% bind_rows()
+```
+
+    ## Warning: `rerun()` was deprecated in purrr 1.0.0.
+    ## ℹ Please use `map()` instead.
+    ##   # Previously
+    ##   rerun(100, sim_mean_sd(samp_size = n_list[[1]]))
+    ## 
+    ##   # Now
+    ##   map(1:100, ~ sim_mean_sd(samp_size = n_list[[1]]))
+    ## This warning is displayed once every 8 hours.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+    ## generated.
+
+``` r
+for (i in 1:4) {
+  
+  output[[i]] = 
+    rerun(100, sim_mean_sd(samp_size = n_list[[i]])) %>% 
+    bind_rows()
+  
+}
+```
+
+    ## Warning: `rerun()` was deprecated in purrr 1.0.0.
+    ## ℹ Please use `map()` instead.
+    ##   # Previously
+    ##   rerun(100, sim_mean_sd(samp_size = n_list[[i]]))
+    ## 
+    ##   # Now
+    ##   map(1:100, ~ sim_mean_sd(samp_size = n_list[[i]]))
+    ## This warning is displayed once every 8 hours.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+    ## generated.
+
+``` r
+sim_results = 
+  tibble(
+    sample_size = c(30, 60, 120, 240)
+  ) %>% 
+    mutate(
+      output_lists = map(.x = sample_size, ~ rerun(10, sim_mean_sd(.x))),
+      estimate_df = map(output_lists, bind_rows)
+    ) %>% 
+    select(-output_lists) %>% 
+    unnest(estimate_df)
+```
+
+    ## Warning: There was 1 warning in `mutate()`.
+    ## ℹ In argument: `output_lists = map(.x = sample_size, ~rerun(10,
+    ##   sim_mean_sd(.x)))`.
+    ## Caused by warning:
+    ## ! `rerun()` was deprecated in purrr 1.0.0.
+    ## ℹ Please use `map()` instead.
+    ##   # Previously
+    ##   rerun(10, sim_mean_sd(.x))
+    ## 
+    ##   # Now
+    ##   map(1:10, ~ sim_mean_sd(.x))
+
+Do some data frame things
+
+``` r
+sim_results %>% 
+  mutate(
+    sample_size = str_c("n = ", sample_size),
+    sample_size = fct_inorder(sample_size)
+  ) %>% 
+  ggplot(aes(x = sample_size, y = mean)) + 
+  geom_violin()
+```
+
+<img src="simulation_files/figure-gfm/unnamed-chunk-8-1.png" width="90%" />
+
+``` r
+sim_results %>% 
+  group_by(sample_size) %>% 
+  summarize(
+    avg_samp_mean = mean(mean),
+    sd_sam_mean = sd(mean)
+  )
+```
+
+    ## # A tibble: 4 × 3
+    ##   sample_size avg_samp_mean sd_sam_mean
+    ##         <dbl>         <dbl>       <dbl>
+    ## 1          30          2.79       0.490
+    ## 2          60          2.93       0.310
+    ## 3         120          3.04       0.280
+    ## 4         240          2.98       0.373
